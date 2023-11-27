@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "rise-assignment-ner-finetune"
+version = "0.1.0"
+description = ""
+authors = ["i-be-snek <sjzahra@proton.me>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<=3.11"
+transformers = "^4.35.2"
+datasets = "^2.15.0"
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.26.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
