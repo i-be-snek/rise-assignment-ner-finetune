@@ -9,8 +9,7 @@ if __name__ == "__main__":
     check_gpus()
 
     system_a = Data(reduced_tagset=())
-
-
+    
     train(optimizer=optimizer,
         tokenized_tf_dataset=system_a,
         model_name="distilroberta-base", 
