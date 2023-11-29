@@ -9,13 +9,23 @@ from transformers import (AutoTokenizer, BertTokenizerFast,
 
 @dataclass
 class Data:
+    label_list: list
     data_split: tuple = ("test", "validation", "train")
-    model_name: str = "distilroberta-base"
+    pretrained_model_checkpoint: str = "distilroberta-base"
     dataset_batch_size: int = 8
     reduced_tagset: tuple = ()
-    model = TFAutoModelForTokenClassification.from_pretrained(self.model_name)
 
     def __post_init__(self) -> None:
+        self.id2label = {i: label for i, label in enumerate(self.label_list)}
+        self.label2id = {label: i for i, label in enumerate(self.label_list)}
+
+        self.model = TFAutoModelForTokenClassification.from_pretrained(
+            self.pretrained_model_checkpoint,
+            num_labels=len(self.label_list),
+            id2label=self.id2label,
+            label2id=self.label2id,
+        )
+
         self.dataset: DatasetDict = load_dataset("Babelscape/multinerd")
 
         # filter out non-English examples
@@ -24,7 +34,7 @@ class Data:
             self.dataset[ds] = self.dataset[ds].remove_columns("lang")
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name, add_prefix_space=True
+            self.pretrained_model_checkpoint, add_prefix_space=True
         )
         assert isinstance(self.tokenizer, PreTrainedTokenizerFast), print(
             "Not a fast tokenizer!"
