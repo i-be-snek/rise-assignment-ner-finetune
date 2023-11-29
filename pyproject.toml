@@ -9,10 +9,18 @@ readme = "README.md"
 python = ">=3.9,<=3.11"
 transformers = "^4.35.2"
 datasets = "^2.15.0"
+seqeval = "^1.2.2"
+tensorflow = {version = "2.14", extras = ["and-cuda"]}
+evaluate = "^0.4.1"
+numba = "^0.58.1"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.26.0"
 black = "^23.11.0"
+tqdm = "^4.66.1"
+jupyter = "^1.0.0"
+isort = "^5.12.0"
+spacy = "^3.7.2"
 
 [build-system]
 requires = ["poetry-core"]
