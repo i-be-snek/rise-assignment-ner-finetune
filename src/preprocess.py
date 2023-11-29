@@ -1,14 +1,10 @@
 from dataclasses import dataclass
 
 from datasets import DatasetDict, load_dataset
-from transformers import (
-    AutoTokenizer,
-    BertTokenizerFast,
-    DataCollatorForTokenClassification,
-    PreTrainedTokenizerFast,
-)
-
-from tag import TagInfo
+from transformers import (AutoTokenizer, BertTokenizerFast,
+                          DataCollatorForTokenClassification,
+                          PreTrainedTokenizerFast,
+                          TFAutoModelForTokenClassification)
 
 
 @dataclass
@@ -17,6 +13,7 @@ class Data:
     model_name: str = "distilroberta-base"
     dataset_batch_size: int = 8
     reduced_tagset: tuple = ()
+    model = TFAutoModelForTokenClassification.from_pretrained(self.model_name)
 
     def __post_init__(self) -> None:
         self.dataset: DatasetDict = load_dataset("Babelscape/multinerd")
@@ -48,28 +45,27 @@ class Data:
         else:
             print("Using the full tagset")
 
-    def create_tokenized_sets(self, model) -> None:
         self.tokenized_dataset = self.dataset.map(
             self.tokenize_and_align_labels,
             fn_kwargs={"tokenizer": self.tokenizer},
             batched=True,
         )
 
-        self.train_set = model.prepare_tf_dataset(
+        self.train_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["train"],
             shuffle=True,
             batch_size=self.dataset_batch_size,
             collate_fn=self.data_collator,
         )
 
-        self.validation_set = model.prepare_tf_dataset(
+        self.validation_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["validation"],
             shuffle=False,
             batch_size=self.dataset_batch_size,
             collate_fn=self.data_collator,
         )
 
-        self.test_set = model.prepare_tf_dataset(
+        self.test_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["test"],
             shuffle=False,
             batch_size=self.dataset_batch_size,
@@ -93,7 +89,7 @@ class Data:
         """
         It tokenizes sentences and aligns their labels. The label mismatch is caused by WordPiece tokenizers
         that adds special tokesn (like '[CLS]' and '[SEP]') and uses '#' signs to split words into subwords.
-        When this happens, the length and labels of the sentence won't match the tokenized output.
+        When this happens, the length and labels of the sentence won't match the tokenized output.model
         Special tokens with a `word_id` of `None` will be set to -100 to be automatically ignored by the loss function
 
         This function tokenizes and aligns the examples. It's borrowed directly from a hugginface
