@@ -40,7 +40,6 @@ def train(
     early_stopping_patience: int = 3,
     model_checkpoint: str = "A",
 ) -> None:
-    from pprint import pprint
     from random import randint
 
     from transformers import TFAutoModelForTokenClassification
@@ -64,7 +63,7 @@ def train(
         print("Early stopping with patience of", early_stopping_patience)
 
     print("Dataset loaded and tokenized. Sample:")
-    pprint(data_class_obj.tokenized_dataset["train"][randint(0, 200)], indent=3)
+    print(data_class_obj.tokenized_dataset["train"][randint(0, 200)])
 
     data_class_obj.model.compile(optimizer=optimizer)
 
