@@ -41,6 +41,16 @@ class Eval:
         results = self.metric.compute(
             predictions=true_predictions, references=true_labels
         )
+        
+        # print results for individual entity types
+        for i in results.keys():
+            if not i.startswith("overall"):
+                print()
+                print(i)
+                for res in results[i]:
+                    if res != "number":
+                        print("{}\t{}".format(res,results[i][res]))
+
         return {
             "precision": results["overall_precision"],
             "recall": results["overall_recall"],
