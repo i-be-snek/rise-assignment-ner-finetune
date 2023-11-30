@@ -1,10 +1,12 @@
 from typing import Any
 
+from huggingface_hub import login
+
 from src.preprocess import Data
 
 
 def check_gpus():
-    import os
+    from os import environ
 
     from tensorflow import config
 
@@ -16,59 +18,90 @@ def check_gpus():
         except RuntimeError as e:
             print(e)
 
-    os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
+    environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"
+
+
+def get_token():
+    from dotenv import dotenv_values
+
+    token = dotenv_values(".env")["HF_TOKEN"]
+    return token
 
 
 def train(
     optimizer: Any,
-    tokenized_tf_dataset: Data,
+    data_class_obj: Data,
     model_name: str = "distilroberta-base",
     verbose: int = 1,
     epochs: int = 3,
     tensorboard_callback: bool = False,
+    push_to_hub_callback: bool = False,
+    early_stopping: bool = False,
+    early_stopping_patience: int = 3,
     model_checkpoint: str = "A",
-) -> tf.keras.Model:
+) -> None:
+    from pprint import pprint
+    from random import randint
+
     from transformers import TFAutoModelForTokenClassification
+    from transformers.keras_callbacks import KerasMetricCallback
 
     from src.metrics import Eval
 
+    callbacks = []
+
+    output_path = f"tc_model_save_{model_checkpoint}"
+
+    if early_stopping:
+        from tensorflow.keras.callbacks import EarlyStopping
+
+        early_stopping_callback = EarlyStopping(
+            monitor="loss",
+            restore_best_weights=True,
+            patience=early_stopping_patience,
+        )
+        callbacks.append(early_stopping_callback)
+        print("Early stopping with patience of", early_stopping_patience)
+
     print("Dataset loaded and tokenized. Sample:")
-    print(tokenized_tf_dataset.tokenized_dataset["train"][random.randint(0, 200)])
+    pprint(data_class_obj.tokenized_dataset["train"][randint(0, 200)])
 
-    model = TFAutoModelForTokenClassification.from_pretrained(model_name)
-    model.compile(optimizer=optimizer)
+    data_class_obj.model.compile(optimizer=optimizer)
 
-    print(model.summary())
+    print(data_class_obj.model.summary())
     print()
 
-    metric_callback = KerasMetricCallback(
-        metric_fn=Eval.compute_metrics,  # eval_dataset=tokenized_tf_dataset.validation_set
-    )
+    eval_metrics = Eval(metric_name="seqeval", label_list=data_class_obj.id2label)
 
-    callbacks = [metric_callback]
+    metric_callback = KerasMetricCallback(
+        metric_fn=eval_metrics.compute_metrics,
+        eval_dataset=data_class_obj.validation_set,
+    )
+    callbacks.append(metric_callback)
 
     if tensorboard_callback:
+        from tensorflow.keras.callbacks import TensorBoard
+
         print("Adding tensorboard callback")
-        tensorboard_callback = TensorBoard(log_dir="./tc_model_save/logs")
+        tensorboard_callback = TensorBoard(log_dir=f"./{output_path}/logs")
         callbacks.append(tensorboard_callback)
 
+    if push_to_hub_callback:
+        print("Pushing checkpoints to HF hub")
+        from transformers.keras_callbacks import PushToHubCallback
+
+        push_to_hub_callback = PushToHubCallback(
+            output_dir="./{output_path}",
+            tokenizer=data_class_obj.tokenizer,
+            hub_model_id=f"{model_name}-finetuned-ner-{model_checkpoint}",
+        )
+        callbacks.append(push_to_hub_callback)
+
     print("Fitting model...")
-    model.fit(
-        tokenized_tf_dataset.train_set,
-        validation_data=sys.validation_set,
+    data_class_obj.model.fit(
+        data_class_obj.train_set,
+        validation_data=data_class_obj.validation_set,
         epochs=epochs,
         callbacks=callbacks,
         verbose=verbose,
     )
-
-    print("Evaluating model")
-    # todo: evaluate model
-
-    print("Storing results")
-    # todo: store results
-
-    print("Saving the model...")
-    model.save(f"model_{model_checkpoint}.keras")
-
-    print("Inference sample:")
-    # todo: print sample

@@ -38,7 +38,7 @@ class TagInfo:
     }
 
     # PER, ORG, LOC, DIS, ANIM
-    reduced_tagset = {
+    main_five = {
         "O": 0,
         "B-PER": 1,
         "I-PER": 2,

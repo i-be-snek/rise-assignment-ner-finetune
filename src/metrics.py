@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 
 
+@dataclass
 class Eval:
-    metric: str = "seqval"
     label_list: list
+    metric_name: str = "seqeval"
 
-    @staticmethod
-    def compute_metrics(p):
+    def compute_metrics(self, p):
         """
         This function is taken from a transformer notebook example.
         https://github.com/huggingface/notebooks/blob/main/examples/token_classification-tf.ipynb
 
-        Choosing the seqval metric allows us to get precision, recall, and f1,
+        Choosing the seqeval metric allows us to get precision, recall, and f1,
         making the results comparable to the scores in the paper https://aclanthology.org/2022.findings-naacl.60.pdf
 
         Args:
@@ -22,6 +22,8 @@ class Eval:
         """
         from evaluate import load
         from numpy import argmax
+
+        self.metric = load(self.metric_name)
 
         predictions, labels = p
         predictions = argmax(predictions, axis=2)

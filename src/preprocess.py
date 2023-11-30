@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict
 
 from datasets import DatasetDict, load_dataset
 from transformers import (AutoTokenizer, BertTokenizerFast,
@@ -6,32 +7,62 @@ from transformers import (AutoTokenizer, BertTokenizerFast,
                           PreTrainedTokenizerFast,
                           TFAutoModelForTokenClassification)
 
+from src.tag import TagInfo
+
 
 @dataclass
 class Data:
-    label_list: list
-    data_split: tuple = ("test", "validation", "train")
+    """
+    A dataclass to to preprocess a dataset. Labels will be tokenized and aligned.
+
+    Args:
+        labels (dict[str, int]): a dictionary of named entity tags to labels. Example: {"O": 0, "B-PER": 1}
+        pretrained_model_checkpoint (str): a pretrained model checkpoint from HuggingFace; this will be loaded as a `TFAutoModelForTokenClassification`
+        dataset_batch_size (int): tensorflow dataset batch size; select a smaller batch size if encountering OOM problems with GPU training
+        filter_tagset (bool): whether or not to re-tag examples not found in the labels dict as "0"
+        language (str): a two-letter language code to the dataset by; pass an empty string "" to disable
+
+    Raises:
+        AssertionError: if the language selected for filtering isn't available
+
+    """
+
+    labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
     pretrained_model_checkpoint: str = "distilroberta-base"
     dataset_batch_size: int = 8
-    reduced_tagset: tuple = ()
+    filter_tagset: bool = False
+    language: str = "en"
 
     def __post_init__(self) -> None:
-        self.id2label = {i: label for i, label in enumerate(self.label_list)}
-        self.label2id = {label: i for i, label in enumerate(self.label_list)}
+        self.label_names: list(str) = list(self.labels.keys())
+        self.label_values: list(int) = list(self.labels.values())
+
+        self.id2label = self.labels
+        self.label2id = dict(self.id2label.items())
 
         self.model = TFAutoModelForTokenClassification.from_pretrained(
             self.pretrained_model_checkpoint,
-            num_labels=len(self.label_list),
+            num_labels=len(self.label_names),
             id2label=self.id2label,
             label2id=self.label2id,
         )
 
         self.dataset: DatasetDict = load_dataset("Babelscape/multinerd")
+        self.dataset_languages = self.dataset.unique("lang")["train"]
+        self.data_split: tuple = tuple(self.dataset.keys())
 
-        # filter out non-English examples
-        for ds in self.data_split:
-            self.dataset[ds] = self.dataset[ds].filter(lambda x: x["lang"] == "en")
-            self.dataset[ds] = self.dataset[ds].remove_columns("lang")
+        if self.language not in self.dataset_languages:
+            raise AssertionError(
+                f"The selected language {self.language} is not available in the dataset. Available languages: {', '.join(self.dataset_languages)}"
+            )
+        # Filter by language
+        if self.language:
+            for ds in self.data_split:
+                self.dataset[ds] = self.dataset[ds].filter(
+                    lambda x: x["lang"] == self.language
+                )
+                self.dataset[ds] = self.dataset[ds].remove_columns("lang")
+            print(self.dataset)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.pretrained_model_checkpoint, add_prefix_space=True
@@ -41,20 +72,26 @@ class Data:
         )
 
         self.data_collator = DataCollatorForTokenClassification(
-            self.tokenizer, return_tensors="np"
+            self.tokenizer,
+            return_tensors="np",
         )
 
-        if len(self.reduced_tagset) > 0:
-            print(f"Keeping these tags only: {', '.join(self.reduced_tagset)}")
+        # Filter out extra tags if training with a smaller tagset
+        if self.filter_tagset:
+            print(
+                f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'"
+            )
             for ds in self.data_split:
                 self.dataset[ds] = self.dataset[ds].map(
                     self.filter_out_tags,
-                    fn_kwargs={"tags_to_keep": self.reduced_tagset},
+                    fn_kwargs={"tags_to_keep": self.label_values},
                     num_proc=4,
                 )
+
         else:
             print("Using the full tagset")
 
+        # Tokenize the dataset
         self.tokenized_dataset = self.dataset.map(
             self.tokenize_and_align_labels,
             fn_kwargs={"tokenizer": self.tokenizer},
@@ -97,7 +134,7 @@ class Data:
         label_all_tokens: bool = True,
     ):
         """
-        It tokenizes sentences and aligns their labels. The label mismatch is caused by WordPiece tokenizers
+        Ths function tokenizes sentences and aligns their labels. The label mismatch is caused by WordPiece tokenizers
         that adds special tokesn (like '[CLS]' and '[SEP]') and uses '#' signs to split words into subwords.
         When this happens, the length and labels of the sentence won't match the tokenized output.model
         Special tokens with a `word_id` of `None` will be set to -100 to be automatically ignored by the loss function
@@ -114,7 +151,7 @@ class Data:
                 Defaults to True.
 
         Returns:
-            _type_: _description_
+            tokenized_inputs (dict): A dictionary with tokenized inputs to feed into the model
         """
         tokenized_inputs = tokenizer(
             examples["tokens"],
