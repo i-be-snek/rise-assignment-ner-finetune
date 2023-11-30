@@ -64,14 +64,14 @@ def train(
         print("Early stopping with patience of", early_stopping_patience)
 
     print("Dataset loaded and tokenized. Sample:")
-    pprint(data_class_obj.tokenized_dataset["train"][randint(0, 200)])
+    pprint(data_class_obj.tokenized_dataset["train"][randint(0, 200)], indent=3)
 
     data_class_obj.model.compile(optimizer=optimizer)
 
     print(data_class_obj.model.summary())
     print()
 
-    eval_metrics = Eval(metric_name="seqeval", label_list=data_class_obj.id2label)
+    eval_metrics = Eval(metric_name="seqeval", label_list=list(data_class_obj.label2id.keys()))
 
     metric_callback = KerasMetricCallback(
         metric_fn=eval_metrics.compute_metrics,
