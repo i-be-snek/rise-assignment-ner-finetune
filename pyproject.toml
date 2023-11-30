@@ -22,6 +22,7 @@ tqdm = "^4.66.1"
 jupyter = "^1.0.0"
 isort = "^5.12.0"
 spacy = "^3.7.2"
+autoflake = "^2.2.1"
 
 [build-system]
 requires = ["poetry-core"]
