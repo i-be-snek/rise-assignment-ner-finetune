@@ -12,7 +12,8 @@ datasets = "^2.15.0"
 seqeval = "^1.2.2"
 tensorflow = {version = "2.14", extras = ["and-cuda"]}
 evaluate = "^0.4.1"
-numba = "^0.58.1"
+huggingface-hub = "^0.19.4"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.26.0"
