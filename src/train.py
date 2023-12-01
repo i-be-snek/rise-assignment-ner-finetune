@@ -120,4 +120,4 @@ def train(
         verbose=verbose,
     )
 
-    data_class_obj.model.save(f"./{output_path}/model.h5")
+    data_class_obj.model.save(f"./{output_path}/model", save_format="tf")
