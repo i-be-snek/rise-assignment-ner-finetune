@@ -1,10 +1,11 @@
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
+
 
 @dataclass
 class Eval:
     label_list: list
-    metrics_results_filename: str 
+    metrics_results_filename: str
     metric_name: str = "seqeval"
 
     def compute_metrics(self, p):
@@ -41,8 +42,8 @@ class Eval:
 
         results = self.metric.compute(
             predictions=true_predictions, references=true_labels
-        )   
-        
+        )
+
         # print results for individual entity types
         for i in results.keys():
             if not i.startswith("overall"):
@@ -50,11 +51,11 @@ class Eval:
                 print(i)
                 for res in results[i]:
                     if res != "number":
-                        print("{}\t{}".format(res,results[i][res]))
+                        print("{}\t{}".format(res, results[i][res]))
 
         with open(self.metrics_results_filename, "a") as f:
-                f.write(json.dumps(results, default=str) + "\n")
-    
+            f.write(json.dumps(results, default=str) + "\n")
+
         return {
             "precision": results["overall_precision"],
             "recall": results["overall_recall"],
