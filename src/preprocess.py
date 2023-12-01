@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from typing import Dict
 
@@ -8,6 +9,12 @@ from transformers import (AutoTokenizer, BertTokenizerFast,
                           TFAutoModelForTokenClassification)
 
 from src.tag import TagInfo
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 @dataclass
@@ -40,9 +47,10 @@ class Data:
         self.label2id = self.labels
         self.id2label = {v: k for k, v in self.label2id.items()}
 
-        print("Label to ID:\n", self.label2id)
-        print("ID to Label:\n", self.id2label)
+        logging.info(f"Label to ID: {self.label2id}")
+        logging.info(f"ID to label: {self.id2label}")
 
+        # Load model with X labels
         self.model = TFAutoModelForTokenClassification.from_pretrained(
             self.pretrained_model_checkpoint,
             num_labels=len(self.label_names),
@@ -50,29 +58,33 @@ class Data:
             label2id=self.label2id,
         )
 
+        # Load MultiNERD dataset
         self.dataset: DatasetDict = load_dataset("Babelscape/multinerd")
+        logging.info(f"Dataset `Babelscape/multinerd` loaded:\n{self.dataset}")
+
+        # Filter by language
         self.dataset_languages = self.dataset.unique("lang")["train"]
         self.data_split: tuple = tuple(self.dataset.keys())
-
         if self.language not in self.dataset_languages:
             raise AssertionError(
                 f"The selected language {self.language} is not available in the dataset. Available languages: {', '.join(self.dataset_languages)}"
             )
-        # Filter by language
         if self.language:
             for ds in self.data_split:
-                self.dataset[ds] = self.dataset[ds].filter(
-                    lambda x: x["lang"] == self.language
-                )
+                self.dataset[ds] = self.dataset[ds].filter(lambda x: x["lang"] == self.language)
                 self.dataset[ds] = self.dataset[ds].remove_columns("lang")
-            print(self.dataset)
+            logging.info(f"Filtered language by {self.language}. \n{self.dataset}")
 
+        # Load Tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.pretrained_model_checkpoint, add_prefix_space=True
+            self.pretrained_model_checkpoint,  # add_prefix_space=True
         )
-        assert isinstance(self.tokenizer, PreTrainedTokenizerFast), print(
-            "Not a fast tokenizer!"
-        )
+
+        try:
+            isinstance(self.tokenizer, PreTrainedTokenizerFast)
+        except AssertionError as err:
+            logging.error(f"Not a fast tokenizer!")
+            raise err
 
         self.data_collator = DataCollatorForTokenClassification(
             self.tokenizer,
@@ -81,18 +93,15 @@ class Data:
 
         # Filter out extra tags if training with a smaller tagset
         if self.filter_tagset:
-            print(
-                f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'"
-            )
+            logging.info(f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'")
             for ds in self.data_split:
                 self.dataset[ds] = self.dataset[ds].map(
                     self.filter_out_tags,
                     fn_kwargs={"tags_to_keep": self.label_values},
                     num_proc=4,
                 )
-
         else:
-            print("Using the full tagset")
+            logging.info("Using the full tagset")
 
         # Tokenize the dataset
         self.tokenized_dataset = self.dataset.map(
@@ -125,9 +134,7 @@ class Data:
     @staticmethod
     def filter_out_tags(example: dict, tags_to_keep: list) -> dict:
         ner_tags: list = example["ner_tags"]
-        example["ner_tags"] = [
-            0 if tag not in tags_to_keep else tag for tag in ner_tags
-        ]
+        example["ner_tags"] = [0 if tag not in tags_to_keep else tag for tag in ner_tags]
         return example
 
     @staticmethod

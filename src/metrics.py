@@ -1,5 +1,12 @@
 import json
+import logging
 from dataclasses import dataclass
+
+logging.basicConfig(
+    format="%(asctime)s %(levelname)-8s %(message)s",
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 
 @dataclass
@@ -40,18 +47,15 @@ class Eval:
             for prediction, label in zip(predictions, labels)
         ]
 
-        results = self.metric.compute(
-            predictions=true_predictions, references=true_labels
-        )
+        results = self.metric.compute(predictions=true_predictions, references=true_labels)
 
-        # print results for individual entity types
+        # show results for individual entity types
         for i in results.keys():
             if not i.startswith("overall"):
-                print()
-                print(i)
+                logging.info(f"\nEntity: {i}")
                 for res in results[i]:
                     if res != "number":
-                        print("{}\t{}".format(res, results[i][res]))
+                        logging.info(f"{res} \t {results[i][res]}")
 
         with open(self.metrics_results_filename, "a") as f:
             f.write(json.dumps(results, default=str) + "\n")
