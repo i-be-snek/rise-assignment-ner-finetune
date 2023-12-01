@@ -5,7 +5,6 @@ from src.preprocess import Data
 from huggingface_hub import login
 from transformers.utils import send_example_telemetry
 
-
 if __name__ == "__main__":
     print("Logging into huggingface")
     login(get_token())
@@ -16,6 +15,7 @@ if __name__ == "__main__":
     
     optimizer = AdamWeightDecay(learning_rate=2e-5, weight_decay_rate=0.0)
 
+    # Training A
     system_a = Data(labels=TagInfo.full_tagset,
                     pretrained_model_checkpoint="distilroberta-base",
                     dataset_batch_size=16,
@@ -28,10 +28,32 @@ if __name__ == "__main__":
         data_class_obj=system_a,
         model_name="distilroberta-base",
         verbose=1,
-        epochs=6,
+        epochs=10,
         tensorboard_callback=True,
         push_to_hub_callback=True,
-        early_stopping=False,
-        #early_stopping_patience=4,
+        early_stopping=True,
+        early_stopping_patience=3,      
         model_checkpoint="A",
     )
+
+    # Training B
+
+    # system_b = Data(labels=TagInfo.main_five,
+    #                 pretrained_model_checkpoint="distilroberta-base",
+    #                 dataset_batch_size=16,
+    #                 filter_tagset=False,
+    #                 language="en"
+    #                 )
+# 
+    # train(
+    #     optimizer=optimizer,
+    #     data_class_obj=system_a,
+    #     model_name="distilroberta-base",
+    #     verbose=1,
+    #     epochs=5,
+    #     tensorboard_callback=False,
+    #     push_to_hub_callback=False,
+    #     early_stopping=False,
+    #     #early_stopping_patience=3,
+    #     model_checkpoint="B",
+    # )
