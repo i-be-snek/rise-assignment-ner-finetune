@@ -1,9 +1,10 @@
-from src.train import check_gpus, train, get_token
-from transformers import AdamWeightDecay
-from src.tag import TagInfo
-from src.preprocess import Data
 from huggingface_hub import login
+from transformers import AdamWeightDecay
 from transformers.utils import send_example_telemetry
+
+from src.preprocess import Data
+from src.tag import TagInfo
+from src.train import check_gpus, get_token, train
 
 if __name__ == "__main__":
     print("Logging into huggingface")
@@ -12,16 +13,17 @@ if __name__ == "__main__":
     send_example_telemetry("finetuning fill-mask model on NER", framework="tensorflow")
 
     check_gpus()
-    
+
     optimizer = AdamWeightDecay(learning_rate=2e-5, weight_decay_rate=0.0)
 
     # Training A
-    system_a = Data(labels=TagInfo.full_tagset,
-                    pretrained_model_checkpoint="distilroberta-base",
-                    dataset_batch_size=16,
-                    filter_tagset=False,
-                    language="en"
-                    )
+    system_a = Data(
+        labels=TagInfo.full_tagset,
+        pretrained_model_checkpoint="distilroberta-base",
+        dataset_batch_size=16,
+        filter_tagset=False,
+        language="en",
+    )
 
     train(
         optimizer=optimizer,
@@ -32,8 +34,8 @@ if __name__ == "__main__":
         tensorboard_callback=True,
         push_to_hub_callback=True,
         early_stopping=True,
-        early_stopping_patience=3,      
-        model_checkpoint="A",
+        early_stopping_patience=3,
+        model_checkpoint="exp_A",
     )
 
     # Training B
