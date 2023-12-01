@@ -44,16 +44,16 @@ if __name__ == "__main__":
     #                 filter_tagset=False,
     #                 language="en"
     #                 )
-# 
+
     # train(
     #     optimizer=optimizer,
-    #     data_class_obj=system_a,
+    #     data_class_obj=system_b,
     #     model_name="distilroberta-base",
     #     verbose=1,
-    #     epochs=5,
-    #     tensorboard_callback=False,
-    #     push_to_hub_callback=False,
-    #     early_stopping=False,
-    #     #early_stopping_patience=3,
+    #     epochs=10,
+    #     tensorboard_callback=True,
+    #     push_to_hub_callback=True,
+    #     early_stopping=True,
+    #     early_stopping_patience=3,
     #     model_checkpoint="B",
     # )
