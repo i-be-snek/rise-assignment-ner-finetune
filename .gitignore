@@ -161,3 +161,6 @@ cython_debug/
 
 # hugginface
 tc_model_save*
+
+# while developing a model poc
+notebook
