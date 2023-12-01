@@ -52,7 +52,7 @@ class Eval:
         # show results for individual entity types
         for i in results.keys():
             if not i.startswith("overall"):
-                logging.info(f"\nEntity: {i}")
+                logging.info(f"\tEntity: {i}")
                 for res in results[i]:
                     if res != "number":
                         logging.info(f"{res} \t {results[i][res]}")

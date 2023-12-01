@@ -1,9 +1,7 @@
+import logging
 from typing import Any
 
-from huggingface_hub import login
-
 from src.preprocess import Data
-import logging
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -46,7 +44,6 @@ def train(
     early_stopping_patience: int = 3,
     experiment_name: str = "A",
 ) -> None:
-    from transformers import TFAutoModelForTokenClassification
     from transformers.keras_callbacks import KerasMetricCallback
 
     from src.metrics import Eval
@@ -100,14 +97,16 @@ def train(
         )
         callbacks.append(push_to_hub_callback)
 
-    else:
+    elif not push_to_hub_callback:
         logging.info("Storing model checkpoint at each epoch")
         from tensorflow.keras.callbacks import ModelCheckpoint
+
         save_checkpoint = ModelCheckpoint(
             f"./{output_path}/checkpoint_" + "{epoch:02d}.model.h5",
             save_freq="epoch",
             verbose=1,
             save_best_only=False,
+            save_weights_only=True,
         )
         callbacks.append(save_checkpoint)
 
@@ -120,3 +119,5 @@ def train(
         callbacks=callbacks,
         verbose=verbose,
     )
+
+    data_class_obj.model.save(f"./{output_path}/model.h5")
