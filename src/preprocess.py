@@ -37,8 +37,11 @@ class Data:
         self.label_names: list(str) = list(self.labels.keys())
         self.label_values: list(int) = list(self.labels.values())
 
-        self.id2label = self.labels
-        self.label2id = dict(self.id2label.items())
+        self.label2id = self.labels
+        self.id2label = {v: k for k, v in self.label2id.items()}
+
+        print("Label to ID:\n", label2id)
+        print("ID to Label:\n", id2label)
 
         self.model = TFAutoModelForTokenClassification.from_pretrained(
             self.pretrained_model_checkpoint,
