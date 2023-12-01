@@ -4,7 +4,6 @@ from huggingface_hub import login
 
 from src.preprocess import Data
 
-
 def check_gpus():
     from os import environ
 
@@ -70,7 +69,8 @@ def train(
     print(data_class_obj.model.summary())
     print()
 
-    eval_metrics = Eval(metric_name="seqeval", label_list=list(data_class_obj.label2id.keys()))
+    eval_metrics = Eval(metrics_results_filename=f"{output_path}/metrics_by_entity.txt", 
+    metric_name="seqeval", label_list=list(data_class_obj.label2id.keys()))
 
     metric_callback = KerasMetricCallback(
         metric_fn=eval_metrics.compute_metrics,
