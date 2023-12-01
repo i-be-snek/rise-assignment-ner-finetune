@@ -94,7 +94,7 @@ def train(
         from transformers.keras_callbacks import PushToHubCallback
 
         push_to_hub_callback = PushToHubCallback(
-            output_dir="./{output_path}",
+            output_dir=f"./{output_path}",
             tokenizer=data_class_obj.tokenizer,
             hub_model_id=f"{model_name}-finetuned-ner-{model_checkpoint}",
         )
