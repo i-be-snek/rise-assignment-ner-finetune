@@ -8,8 +8,6 @@ from transformers import (AutoTokenizer, BertTokenizerFast,
                           PreTrainedTokenizerFast,
                           TFAutoModelForTokenClassification)
 
-from src.tag import TagInfo
-
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
     level=logging.INFO,
@@ -21,7 +19,7 @@ logging.basicConfig(
 class PrepSystem:
     """
     A dataclass to to preprocess a dataset and loads the data and model. Labels will be tokenized and aligned.
-    The class will also load the model, dataset, and tokenizer. The tokenizer must be of type PreTrainedTokenizerFast. 
+    The class will also load the model, dataset, and tokenizer. The tokenizer must be of type PreTrainedTokenizerFast.
     The model mus be a TF/keras-compatible MLM model to be finetuned on Token Classification.
     Examples: https://huggingface.co/models?pipeline_tag=fill-mask&library=tf&sort=trending
 
@@ -38,7 +36,7 @@ class PrepSystem:
 
     """
 
-    #labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
+    # labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
     labels: Dict[str, int] = field(default=dict)
     pretrained_model_checkpoint: str = "distilroberta-base"
     dataset_batch_size: int = 8
@@ -70,23 +68,6 @@ class PrepSystem:
                 self.dataset[ds] = self.dataset[ds].remove_columns("lang")
             logging.info(f"Filtered language by {self.language}. \n{self.dataset}")
 
-        # Load Tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.pretrained_model_checkpoint,  # add_prefix_space=True
-        )
-
-        try:
-            isinstance(self.tokenizer, PreTrainedTokenizerFast)
-        except AssertionError as err:
-            logging.error(f"Not a fast tokenizer!")
-            raise err
-
-        # https://huggingface.co/docs/transformers/main_classes/data_collator
-        self.data_collator = DataCollatorForTokenClassification(
-            self.tokenizer,
-            return_tensors="np",
-        )
-
         # Filter out extra tags if training with a smaller tagset
         if self.filter_tagset:
             logging.info(f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'")
@@ -106,23 +87,23 @@ class PrepSystem:
         self.label2id = self.labels
         self.id2label = {v: k for k, v in self.labels.items()}
         self.id2label = dict(sorted(self.id2label.items()))
-        
+
         # If the token IDs are not sequential, there will be issues computing loss (nan)
         # Swap non-sequential labels
-        labels_to_swap = self.get_labels_to_swap(self.id2label) # {14: 10, 13: 9} #
+        labels_to_swap = self.get_labels_to_swap(self.id2label)  # {14: 10, 13: 9} #
 
         # if there are any labels to swap
         if labels_to_swap:
             logging.info(f"Swapping these labels: {labels_to_swap}")
             self.label2id, self.id2label = self.swap_labels_in_config(self.id2label, labels_to_swap=labels_to_swap)
-            
+
             logging.info(f"Modified label to ID: {self.label2id}")
             logging.info(f"Modified ID to label: {self.id2label}")
-            
+
             for ds in self.data_split:
                 self.dataset[ds] = self.dataset[ds].map(
                     self.swap_labels_in_dataset,
-                    fn_kwargs={"labels_to_swap": labels_to_swap}, 
+                    fn_kwargs={"labels_to_swap": labels_to_swap},
                     num_proc=4,
                 )
 
@@ -131,35 +112,52 @@ class PrepSystem:
         elif not labels_to_swap:
             logging.info(f"All label ids are sequential, nothing to swap.")
 
+    def get_model(self):
         # Load model with X labels
         self.model = TFAutoModelForTokenClassification.from_pretrained(
             self.pretrained_model_checkpoint,
-            num_labels=len(self.label_names),
+            num_labels=len(self.id2label.keys()),
             id2label=self.id2label,
             label2id=self.label2id,
         )
 
+    def load_tokenizer(self):
+        # Load Tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.pretrained_model_checkpoint,  # add_prefix_space=True
+        )
+
+        try:
+            isinstance(self.tokenizer, PreTrainedTokenizerFast)
+        except AssertionError as err:
+            logging.error(f"Not a fast tokenizer!")
+            raise err
+
+        # https://huggingface.co/docs/transformers/main_classes/data_collator
+        self.data_collator = DataCollatorForTokenClassification(
+            self.tokenizer,
+            return_tensors="np",
+        )
+
+    def tokenize_dataset(self):
         # Tokenize the dataset
         self.tokenized_dataset = self.dataset.map(
             self.tokenize_and_align_labels,
             fn_kwargs={"tokenizer": self.tokenizer},
             batched=True,
         )
-
         self.train_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["train"],
             shuffle=True,
             batch_size=self.dataset_batch_size,
             collate_fn=self.data_collator,
         )
-
         self.validation_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["validation"],
             shuffle=False,
             batch_size=self.dataset_batch_size,
             collate_fn=self.data_collator,
         )
-
         self.test_set = self.model.prepare_tf_dataset(
             self.tokenized_dataset["test"],
             shuffle=False,
@@ -177,7 +175,7 @@ class PrepSystem:
 
         label2id = {v: k for k, v in id2label.items()}
         return label2id, id2label
-    
+
     @staticmethod
     def swap_labels_in_dataset(example: dict, labels_to_swap: dict[int, int]):
         ner_tags = example["ner_tags"]
@@ -189,7 +187,7 @@ class PrepSystem:
             else:
                 label_id = i
             modified_ner_tags.append(label_id)
-        
+
         for i in to_swap:
             assert i not in modified_ner_tags
 
@@ -198,17 +196,16 @@ class PrepSystem:
 
     @staticmethod
     def get_labels_to_swap(label_dict: dict[int, str]) -> dict:
-        # begin index at 0 
+        # begin index at 0
         expected_key = 0
-        ids_to_relabel = {} # original -> new
+        ids_to_relabel = {}  # original -> new
 
         for key, value in label_dict.items():
             if key != expected_key:
                 ids_to_relabel[key] = expected_key
             expected_key += 1
-        
-        return dict(sorted(ids_to_relabel.items(), key=lambda x: x[0], reverse=True))
 
+        return dict(sorted(ids_to_relabel.items(), key=lambda x: x[0], reverse=True))
 
     @staticmethod
     def filter_out_tags(example: dict, tags_to_keep: list) -> dict:
