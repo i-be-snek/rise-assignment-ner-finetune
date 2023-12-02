@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from src.preprocess import Data
+from src.preprocess import PrepSystem
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -35,7 +35,7 @@ def get_token():
 
 def train(
     optimizer: Any,
-    data_class_obj: Data,
+    system: PrepSystem,
     verbose: int = 1,
     epochs: int = 3,
     tensorboard_callback: bool = False,
@@ -49,22 +49,22 @@ def train(
     from src.metrics import Eval
 
     output_path = f"tc_model_save_{experiment_name}"
-    data_class_obj.model.compile(optimizer=optimizer)
+    system.model.compile(optimizer=optimizer)
 
-    logging.info(data_class_obj.model.summary())
+    logging.info(system.model.summary())
 
     # Initiate Eval class
     eval_metrics = Eval(
         metrics_results_filename=f"{output_path}/metrics_by_entity.txt",
         metric_name="seqeval",
-        label_list=list(data_class_obj.label2id.keys()),
+        label_list=list(system.label2id.keys()),
     )
 
     # Set up metric callbacks
     callbacks = []
     metric_callback = KerasMetricCallback(
         metric_fn=eval_metrics.compute_metrics,
-        eval_dataset=data_class_obj.validation_set.take(30),
+        eval_dataset=system.validation_set.take(1000),
     )
     callbacks.append(metric_callback)
 
@@ -72,7 +72,7 @@ def train(
         from tensorflow.keras.callbacks import EarlyStopping
 
         early_stopping_callback = EarlyStopping(
-            monitor="loss",
+            monitor="val_loss",
             restore_best_weights=True,
             patience=early_stopping_patience,
         )
@@ -92,8 +92,8 @@ def train(
 
         push_to_hub_callback = PushToHubCallback(
             output_dir=f"./{output_path}",
-            tokenizer=data_class_obj.tokenizer,
-            hub_model_id=f"{data_class_obj.pretrained_model_checkpoint}-finetuned-ner-{experiment_name}",
+            tokenizer=system.tokenizer,
+            hub_model_id=f"{system.pretrained_model_checkpoint}-finetuned-ner-{experiment_name}",
         )
         callbacks.append(push_to_hub_callback)
 
@@ -112,12 +112,12 @@ def train(
 
     logging.info("Fitting model...")
 
-    data_class_obj.model.fit(
-        data_class_obj.train_set.take(30),
-        validation_data=data_class_obj.validation_set.take(30),
+    system.model.fit(
+        system.train_set.take(1000),
+        validation_data=system.validation_set.take(1000),
         epochs=epochs,
         callbacks=callbacks,
         verbose=verbose,
     )
 
-    data_class_obj.model.save(f"./{output_path}/model", save_format="tf")
+    # system.model.save(f"./{output_path}/model", save_format="tf")

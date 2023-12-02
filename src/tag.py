@@ -46,8 +46,8 @@ class TagInfo:
         "I-ORG": 4,
         "B-LOC": 5,
         "I-LOC": 6,
-        "B-DIS": 13,
-        "I-DIS": 14,
         "B-ANIM": 7,
         "I-ANIM": 8,
+        "B-DIS": 13,
+        "I-DIS": 14,
     }
