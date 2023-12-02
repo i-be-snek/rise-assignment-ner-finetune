@@ -18,9 +18,12 @@ logging.basicConfig(
 
 
 @dataclass
-class Data:
+class PrepSystem:
     """
-    A dataclass to to preprocess a dataset. Labels will be tokenized and aligned.
+    A dataclass to to preprocess a dataset and loads the data and model. Labels will be tokenized and aligned.
+    The class will also load the model, dataset, and tokenizer. The tokenizer must be of type PreTrainedTokenizerFast. 
+    The model mus be a TF/keras-compatible MLM model to be finetuned on Token Classification.
+    Examples: https://huggingface.co/models?pipeline_tag=fill-mask&library=tf&sort=trending
 
     Args:
         labels (dict[str, int]): a dictionary of named entity tags to labels. Example: {"O": 0, "B-PER": 1}
@@ -28,39 +31,35 @@ class Data:
         dataset_batch_size (int): tensorflow dataset batch size; select a smaller batch size if encountering OOM problems with GPU training
         filter_tagset (bool): whether or not to re-tag examples not found in the labels dict as "0"
         language (str): a two-letter language code to the dataset by; pass an empty string "" to disable
+        huggingface_dataset_name (str): the name of the dataset to load from hugginface
 
     Raises:
         AssertionError: if the language selected for filtering isn't available
 
     """
 
-    labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
+    #labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
+    labels: Dict[str, int] = field(default=dict)
     pretrained_model_checkpoint: str = "distilroberta-base"
     dataset_batch_size: int = 8
     filter_tagset: bool = False
     language: str = "en"
+    huggingface_dataset_name: str = "Babelscape/multinerd"
 
     def __post_init__(self) -> None:
         self.label_names: list(str) = list(self.labels.keys())
         self.label_values: list(int) = list(self.labels.values())
 
         self.label2id = self.labels
-        self.id2label = {v: k for k, v in self.label2id.items()}
+        self.id2label = {v: k for k, v in self.labels.items()}
 
         logging.info(f"Label to ID: {self.label2id}")
         logging.info(f"ID to label: {self.id2label}")
 
-        # Load model with X labels
-        self.model = TFAutoModelForTokenClassification.from_pretrained(
-            self.pretrained_model_checkpoint,
-            num_labels=len(self.label_names),
-            id2label=self.id2label,
-            label2id=self.label2id,
-        )
-
-        # Load MultiNERD dataset
-        self.dataset: DatasetDict = load_dataset("Babelscape/multinerd")
-        logging.info(f"Dataset `Babelscape/multinerd` loaded:\n{self.dataset}")
+        # Load dataset, must have columns: tokens (list[str]), ner_tags (list[int]), and lang (str)
+        # https://huggingface.co/datasets/Babelscape/multinerd
+        self.dataset: DatasetDict = load_dataset(self.huggingface_dataset_name)
+        logging.info(f"Dataset `{self.huggingface_dataset_name}` loaded:\n{self.dataset}")
 
         # Filter by language
         self.dataset_languages = self.dataset.unique("lang")["train"]
@@ -86,6 +85,7 @@ class Data:
             logging.error(f"Not a fast tokenizer!")
             raise err
 
+        # https://huggingface.co/docs/transformers/main_classes/data_collator
         self.data_collator = DataCollatorForTokenClassification(
             self.tokenizer,
             return_tensors="np",
@@ -102,6 +102,15 @@ class Data:
                 )
         else:
             logging.info("Using the full tagset")
+
+
+        # Load model with X labels
+        self.model = TFAutoModelForTokenClassification.from_pretrained(
+            self.pretrained_model_checkpoint,
+            num_labels=len(self.label_names),
+            id2label=self.id2label,
+            label2id=self.label2id,
+        )
 
         # Tokenize the dataset
         self.tokenized_dataset = self.dataset.map(
