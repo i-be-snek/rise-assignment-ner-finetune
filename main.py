@@ -28,22 +28,23 @@ if __name__ == "__main__":
 
     pretrained_model_checkpoint = "distilbert-base-uncased"
     experiment = "B" # "B"
+    learning_rate = 2e-5
+    optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
 
     if experiment == "A":
         labels = TagInfo.full_tagset
         filter_tagset = False
-        learning_rate = 2e-5
+        #learning_rate = 2e-5
         #optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
 
     if experiment == "B":
         labels = TagInfo.main_five
         filter_tagset = True
-        learning_rate = 3e-5
+        #learning_rate = 3e-5
         #optimizer = Adam(learning_rate)
 
-    optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
-
     experiment_name = f"exp_{experiment}"
+    logging.info(f"Initializeding {experiment_name}")
 
     system = PrepSystem(labels=labels,
                 pretrained_model_checkpoint=pretrained_model_checkpoint,

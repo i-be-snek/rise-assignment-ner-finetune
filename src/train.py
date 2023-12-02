@@ -64,7 +64,7 @@ def train(
     callbacks = []
     metric_callback = KerasMetricCallback(
         metric_fn=eval_metrics.compute_metrics,
-        eval_dataset=system.validation_set.take(1000),
+        eval_dataset=system.validation_set,
     )
     callbacks.append(metric_callback)
 
@@ -113,8 +113,8 @@ def train(
     logging.info("Fitting model...")
 
     system.model.fit(
-        system.train_set.take(1000),
-        validation_data=system.validation_set.take(1000),
+        system.train_set,
+        validation_data=system.validation_set,
         epochs=epochs,
         callbacks=callbacks,
         verbose=verbose,

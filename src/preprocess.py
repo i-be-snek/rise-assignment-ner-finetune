@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, Union
 
 from datasets import DatasetDict, load_dataset
 from transformers import (AutoTokenizer, BertTokenizerFast,
@@ -47,14 +47,10 @@ class PrepSystem:
     huggingface_dataset_name: str = "Babelscape/multinerd"
 
     def __post_init__(self) -> None:
+        # self.swapped_labels: Union[dict, bool] = None
+
         self.label_names: list(str) = list(self.labels.keys())
         self.label_values: list(int) = list(self.labels.values())
-
-        self.label2id = self.labels
-        self.id2label = {v: k for k, v in self.labels.items()}
-
-        logging.info(f"Label to ID: {self.label2id}")
-        logging.info(f"ID to label: {self.id2label}")
 
         # Load dataset, must have columns: tokens (list[str]), ner_tags (list[int]), and lang (str)
         # https://huggingface.co/datasets/Babelscape/multinerd
@@ -100,9 +96,40 @@ class PrepSystem:
                     fn_kwargs={"tags_to_keep": self.label_values},
                     num_proc=4,
                 )
+
         else:
             logging.info("Using the full tagset")
 
+        logging.info("Making sure all labels have sequential IDs. This can happen if a reduced tagset is chosen")
+
+        # Create id2label
+        self.label2id = self.labels
+        self.id2label = {v: k for k, v in self.labels.items()}
+        self.id2label = dict(sorted(self.id2label.items()))
+        
+        # If the token IDs are not sequential, there will be issues computing loss (nan)
+        # Swap non-sequential labels
+        labels_to_swap = self.get_labels_to_swap(self.id2label) # {14: 10, 13: 9} #
+
+        # if there are any labels to swap
+        if labels_to_swap:
+            logging.info(f"Swapping these labels: {labels_to_swap}")
+            self.label2id, self.id2label = self.swap_labels_in_config(self.id2label, labels_to_swap=labels_to_swap)
+            
+            logging.info(f"Modified label to ID: {self.label2id}")
+            logging.info(f"Modified ID to label: {self.id2label}")
+            
+            for ds in self.data_split:
+                self.dataset[ds] = self.dataset[ds].map(
+                    self.swap_labels_in_dataset,
+                    fn_kwargs={"labels_to_swap": labels_to_swap}, 
+                    num_proc=4,
+                )
+
+            self.swapped_labels: Union[dict, bool] = labels_to_swap
+
+        elif not labels_to_swap:
+            logging.info(f"All label ids are sequential, nothing to swap.")
 
         # Load model with X labels
         self.model = TFAutoModelForTokenClassification.from_pretrained(
@@ -139,6 +166,49 @@ class PrepSystem:
             batch_size=self.dataset_batch_size,
             collate_fn=self.data_collator,
         )
+
+    @staticmethod
+    def swap_labels_in_config(id2label: dict[int, str], labels_to_swap: dict[int, int]):
+        for k, v in labels_to_swap.items():
+            id2label[v] = id2label[k]
+
+        for i in list(labels_to_swap.keys()):
+            id2label.pop(i)
+
+        label2id = {v: k for k, v in id2label.items()}
+        return label2id, id2label
+    
+    @staticmethod
+    def swap_labels_in_dataset(example: dict, labels_to_swap: dict[int, int]):
+        ner_tags = example["ner_tags"]
+        modified_ner_tags = []
+        to_swap = list(labels_to_swap.keys())
+        for i in ner_tags:
+            if i in to_swap:
+                label_id = labels_to_swap[i]
+            else:
+                label_id = i
+            modified_ner_tags.append(label_id)
+        
+        for i in to_swap:
+            assert i not in modified_ner_tags
+
+        example["ner_tags"] = modified_ner_tags
+        return example
+
+    @staticmethod
+    def get_labels_to_swap(label_dict: dict[int, str]) -> dict:
+        # begin index at 0 
+        expected_key = 0
+        ids_to_relabel = {} # original -> new
+
+        for key, value in label_dict.items():
+            if key != expected_key:
+                ids_to_relabel[key] = expected_key
+            expected_key += 1
+        
+        return dict(sorted(ids_to_relabel.items(), key=lambda x: x[0], reverse=True))
+
 
     @staticmethod
     def filter_out_tags(example: dict, tags_to_keep: list) -> dict:
