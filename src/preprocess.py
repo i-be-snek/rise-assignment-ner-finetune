@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, Union
 
-from datasets import DatasetDict, load_dataset
+from datasets import ClassLabel, DatasetDict, Sequence, load_dataset
 from transformers import (AutoTokenizer, BertTokenizerFast,
                           DataCollatorForTokenClassification,
                           PreTrainedTokenizerFast,
@@ -43,6 +43,7 @@ class PrepSystem:
     filter_tagset: bool = False
     language: str = "en"
     huggingface_dataset_name: str = "Babelscape/multinerd"
+    split_filter: Union[str, None] = None
 
     def __post_init__(self) -> None:
         # self.swapped_labels: Union[dict, bool] = None
@@ -52,12 +53,13 @@ class PrepSystem:
 
         # Load dataset, must have columns: tokens (list[str]), ner_tags (list[int]), and lang (str)
         # https://huggingface.co/datasets/Babelscape/multinerd
-        self.dataset: DatasetDict = load_dataset(self.huggingface_dataset_name)
-        logging.info(f"Dataset `{self.huggingface_dataset_name}` loaded:\n{self.dataset}")
+        self.dataset: DatasetDict = load_dataset(self.huggingface_dataset_name, split=self.split_filter)
+        if not isinstance(self.dataset, DatasetDict):
+            self.dataset = DatasetDict({self.split_filter.split("[")[0]: self.dataset})
 
         # Filter by language
-        self.dataset_languages = self.dataset.unique("lang")["train"]
         self.data_split: tuple = tuple(self.dataset.keys())
+        self.dataset_languages = self.dataset.unique("lang")[self.data_split[0]]
         if self.language not in self.dataset_languages:
             raise AssertionError(
                 f"The selected language {self.language} is not available in the dataset. Available languages: {', '.join(self.dataset_languages)}"
@@ -112,6 +114,16 @@ class PrepSystem:
         elif not labels_to_swap:
             logging.info(f"All label ids are sequential, nothing to swap.")
 
+        logging.info(
+            "Adding Sequence(ClassLabel) feature to dataset to make it usable with the `TokenClassificationEvaluator` from `evaluation`." \
+            "\nRead more: https://huggingface.co/docs/evaluate/v0.4.0/en/package_reference/evaluator_classes"
+        )
+        class_labels = list(self.id2label.values())
+        for ds in self.data_split:
+            features = self.dataset[ds].features.copy()
+            features["ner_tags"] = Sequence(feature=ClassLabel(names=class_labels))
+            self.dataset[ds] = self.dataset[ds].map(features=features)
+
     def get_model(self):
         # Load model with X labels
         self.model = TFAutoModelForTokenClassification.from_pretrained(
@@ -146,24 +158,28 @@ class PrepSystem:
             fn_kwargs={"tokenizer": self.tokenizer},
             batched=True,
         )
-        self.train_set = self.model.prepare_tf_dataset(
-            self.tokenized_dataset["train"],
-            shuffle=True,
-            batch_size=self.dataset_batch_size,
-            collate_fn=self.data_collator,
-        )
-        self.validation_set = self.model.prepare_tf_dataset(
-            self.tokenized_dataset["validation"],
-            shuffle=False,
-            batch_size=self.dataset_batch_size,
-            collate_fn=self.data_collator,
-        )
-        self.test_set = self.model.prepare_tf_dataset(
-            self.tokenized_dataset["test"],
-            shuffle=False,
-            batch_size=self.dataset_batch_size,
-            collate_fn=self.data_collator,
-        )
+
+        if "train" in self.data_split:
+            self.train_set = self.model.prepare_tf_dataset(
+                self.tokenized_dataset["train"],
+                shuffle=True,
+                batch_size=self.dataset_batch_size,
+                collate_fn=self.data_collator,
+            )
+        if "val" in self.data_split or "validation" in self.data_split:
+            self.validation_set = self.model.prepare_tf_dataset(
+                self.tokenized_dataset["validation"],
+                shuffle=False,
+                batch_size=self.dataset_batch_size,
+                collate_fn=self.data_collator,
+            )
+        if "test" in self.data_split:
+            self.test_set = self.model.prepare_tf_dataset(
+                self.tokenized_dataset["test"],
+                shuffle=False,
+                batch_size=self.dataset_batch_size,
+                collate_fn=self.data_collator,
+            )
 
     @staticmethod
     def swap_labels_in_config(id2label: dict[int, str], labels_to_swap: dict[int, int]):
