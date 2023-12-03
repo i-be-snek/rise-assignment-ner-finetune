@@ -55,7 +55,7 @@ def train(
 
     # Initiate Eval class
     eval_metrics = Eval(
-        metrics_results_filename=f"{output_path}/metrics_by_entity.txt",
+        metrics_results_filename=f"{output_path}/metrics_by_entity.jsonl",
         metric_name="seqeval",
         label_list=list(system.label2id.keys()),
     )
@@ -119,5 +119,3 @@ def train(
         callbacks=callbacks,
         verbose=verbose,
     )
-
-    # system.model.save(f"./{output_path}/model", save_format="tf")
