@@ -48,7 +48,7 @@ def train(
 
     from src.metrics import Eval
 
-    output_path = f"tc_model_save_{experiment_name}"
+    output_path = f"distilbert-base-uncased-finetuned-ner-{experiment_name}"
     system.model.compile(optimizer=optimizer)
 
     logging.info(system.model.summary())
