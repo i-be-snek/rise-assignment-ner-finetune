@@ -116,7 +116,7 @@ class PrepSystem:
             logging.info(f"All label ids are sequential, nothing to swap.")
 
         logging.info(
-            "Adding Sequence(ClassLabel) feature to dataset to make it usable with the `TokenClassificationEvaluator` from `evaluation`."
+            "Adding Sequence(ClassLabel) feature to dataset to make it usable with the `TokenClassificationEvaluator` from `evaluate`."
             "\nRead more: https://huggingface.co/docs/evaluate/v0.4.0/en/package_reference/evaluator_classes"
         )
         class_labels = list(self.id2label.values())
