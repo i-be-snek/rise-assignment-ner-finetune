@@ -59,6 +59,13 @@ if __name__ == "__main__":
 
     system.load_tokenizer()
 
+    # to limit the size of the datasets
+    """
+    num_examples = 1000
+    for ds in system.data_split:
+        system.dataset[ds] = system.dataset[ds].select(range(num_examples))
+    """
+
     system.tokenize_dataset()
 
     sample = system.tokenized_dataset["train"][randint(0, 200)]
@@ -69,10 +76,10 @@ if __name__ == "__main__":
         optimizer=optimizer,
         system=system,
         verbose=1,
-        epochs=6,
-        tensorboard_callback=True,
-        push_to_hub_callback=True,
-        early_stopping=True,
+        epochs=2,
+        tensorboard_callback=False,
+        push_to_hub_callback=False,
+        early_stopping=False,
         early_stopping_patience=2,
         experiment_name=experiment_name,
     )

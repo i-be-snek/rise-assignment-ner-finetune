@@ -1,6 +1,6 @@
 ## Finetuning a Fill-Masked model on Named Entity Recognition
 
-This script fine-tunes a pre-trained fill-mask model (such as `distilbert-base-uncased`) on the NER token-classification task. It's specifically designed for [the multiNERD dataset](https://huggingface.co/datasets/Babelscape/multinerd) but any dataset with columns `tokens` (a list of string features), `ner_tags` (a list of classification labels (int)), and `lang` (a string feature) should work. 
+This script fine-tunes a pre-trained fill-mask model (such as `distilbert-base-uncased`) on the NER token-classification task. It's specifically designed for [the multiNERD dataset](https://huggingface.co/datasets/Babelscape/multinerd) but any dataset with columns `tokens` (a list of string features), `ner_tags` (a list of classification labels (int)), and `lang` (a string feature) should work.
 
 
 ### Summary
@@ -10,7 +10,7 @@ I chose to finetune an uncased pretrained fill-mask model `distilbert-base-uncas
 The two finetuned models (A and B) were evaluated on the English subset of the [Babelscape/multinerd](https://huggingface.co/datasets/Babelscape/multinerd) test set. In model A, `CEL`, `FOOD`, `INST`, `MYTH`, and `PLANT` performed worse on F1. This is similar to the results in the paper (Table 5, evaluated on a manually-annotated 1K test set); except for `CEL` and `MYTH` where the finetuned model A performs worse. This is possibly due to the lack of casing, resulting in poorer precision. Overall, model B, fine-tuned on a smaller tagset, outperforms model A on all five tags (a likely outcome).
 
 Categories `BIO` or `PLANT` with examples of [binomial nomenclature](https://en.wikipedia.org/wiki/Binomial_nomenclature) might yield better performance if finetuned on a cased BERT model instead. Finetuning the fill-mask model on domain-specific texts (featuring sentences with `DIS` or `BIO`) before training a task-specific head for token classification could improve performance since the BERT tokenizer won't treat these now-seen words as rare tokens.
-Another limitation is the class imbalance (`BIO`, `DIS`, `INST`, `MYTH`, and `VEHI` have far fewer examples), which could be overcome by oversampling minority classes. Lastly, more hyperparameter optimization is needed. 
+Another limitation is the class imbalance (`BIO`, `DIS`, `INST`, `MYTH`, and `VEHI` have far fewer examples), which could be overcome by oversampling minority classes. Lastly, more hyperparameter optimization is needed.
 
 ### HuggingFace
 The two experiments and their evaluation metrics can be found on the huggingface hub:
@@ -55,6 +55,8 @@ HF_TOKEN=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
 
 The `PrepSystem` class in `src.preprocess` handles the dataset preprcoessing, tokenization, and any additional transformations. This class allows experimenting with a limited tagset.
 
+You can follow the example below in the [`train_example.ipynb`](train_example.ipynb) notebook.
+
 ```python
 from src.preprocess import PrepSystem
 from src.train import train
@@ -64,6 +66,7 @@ from transformers import AdamWeightDecay
 pretrained_model_checkpoint = "distilbert-base-uncased"
 
 # choose an optimizer
+learning_rate = 2e-5
 optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
 
 # choose a tagset (PER, ORG, LOC, DIS, ANIM)
@@ -159,7 +162,9 @@ train(
         # True to push to hub (make sure you are logged in)
         # False to store results locally
         push_to_hub_callback=False,
-        early_stopping=True, # False to disable
+
+        # False to disable
+        early_stopping=True,
         early_stopping_patience=2,
         experiment_name=experiment_name,
     )

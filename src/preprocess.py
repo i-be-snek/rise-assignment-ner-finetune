@@ -93,12 +93,12 @@ class PrepSystem:
 
         # If the token IDs are not sequential, there will be issues computing loss (nan)
         # Swap non-sequential labels
-        labels_to_swap = self.get_labels_to_swap(self.id2label)  # {14: 10, 13: 9} #
+        labels_to_swap = self.get_labels_to_swap(self.id2label)
 
         # if there are any labels to swap
         if labels_to_swap:
             logging.info(f"Swapping these labels: {labels_to_swap}")
-            self.label2id, self.id2label = self.swap_labels_in_config(self.id2label, labels_to_swap=labels_to_swap)
+            self.label2id, self.id2label = self.swap_labels_in_config(self.label2id, labels_to_swap=labels_to_swap)
 
             logging.info(f"Modified label to ID: {self.label2id}")
             logging.info(f"Modified ID to label: {self.id2label}")
@@ -184,31 +184,35 @@ class PrepSystem:
             )
 
     @staticmethod
-    def swap_labels_in_config(id2label: dict[int, str], labels_to_swap: dict[int, int]):
-        for k, v in labels_to_swap.items():
-            id2label[v] = id2label[k]
+    def swap_labels_in_config(label2id: dict[int, str], labels_to_swap: dict[int, int]):
+        new_label2id = {}
+        for _label, _id in label2id.items():
+            if _id in labels_to_swap:
+                new_label2id[_label] = labels_to_swap[_id]
+            else:
+                new_label2id[_label] = _id
 
-        for i in list(labels_to_swap.keys()):
-            id2label.pop(i)
+        id2label = {v: k for k, v in new_label2id.items()}
 
-        id2label = dict(sorted(id2label.items()))
-        label2id = {v: k for k, v in id2label.items()}
-        return label2id, id2label
+        return new_label2id, id2label
 
     @staticmethod
     def swap_labels_in_dataset(example: dict, labels_to_swap: dict[int, int]):
         ner_tags = example["ner_tags"]
+        # if there are only 0 label IDs (likely when removing tags
+        # from the datatset) then return the example straight away
+        if all(tag == 0 for tag in ner_tags):
+            return example
+
         modified_ner_tags = []
         to_swap = list(labels_to_swap.keys())
+
         for i in ner_tags:
             if i in to_swap:
                 label_id = labels_to_swap[i]
             else:
                 label_id = i
             modified_ner_tags.append(label_id)
-
-        for i in to_swap:
-            assert i not in modified_ner_tags
 
         example["ner_tags"] = modified_ner_tags
         return example
