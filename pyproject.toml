@@ -17,8 +17,8 @@ python-dotenv = "^1.0.0"
 pre-commit = "^3.5.0"
 
 [tool.poetry.group.dev.dependencies]
-tqdm = "^4.66.1"
-spacy = "^3.7.2"
+ipykernel = "^6.27.1"
+jupyter = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core"]
