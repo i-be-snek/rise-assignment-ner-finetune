@@ -19,13 +19,13 @@ This script fine-tunes a pre-trained fill-mask model (such as `distilbert-base-u
     ```
 
 - **With `pip`**
-    
+
     If you don't like `poetry`, you can also install the dependencies via pip
-    
+
     ```shell
     python3
     pip3 install -r requirements.txt
-    # TODO: add dev requirements too! 
+    # TODO: add dev requirements too!
     ```
 
 #### Logging in to Huggingface Hub
@@ -39,7 +39,7 @@ HF_TOKEN=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
 
 ### Quickstart
 
-The `PrepSystem` class in `src.preprocess` handles the dataset preprcoessing, tokenization, and any additional transformations. This class allows experimenting with a limited tagset. 
+The `PrepSystem` class in `src.preprocess` handles the dataset preprcoessing, tokenization, and any additional transformations. This class allows experimenting with a limited tagset.
 
 ```python
 from src.preprocess import PrepSystem
@@ -71,10 +71,10 @@ tagset = {
 # leave as False when using the full dataset
 filter_tagset = True
 
-# Initializing the PrepSystem dataset will load the dataset,  filter it by language, 
+# Initializing the PrepSystem dataset will load the dataset,  filter it by language,
 # and swap omitted tags with the "O" label (if filter_tagset=True)
 
-# When omitting some tags, the tag label ids need to be reset to be sequential numbers 
+# When omitting some tags, the tag label ids need to be reset to be sequential numbers
 # So all instances of "DIS" (which has the label IDs 13 and 14) will be reindexed and mapped to 9 and 10
 system = PrepSystem(
         labels=tagset,
@@ -87,7 +87,7 @@ system = PrepSystem(
 
 ```
 
-The `PrepSystem` object allows us to inspect the dataset. The dataset size is smaller since filtered by english, and the `lang` column has been removed. 
+The `PrepSystem` object allows us to inspect the dataset. The dataset size is smaller since filtered by english, and the `lang` column has been removed.
 
 ```shell
 > system.dataset
@@ -114,10 +114,10 @@ Now it's possible to load the model and tokenizer and preprocess and tokenize th
 # grab the pretrained model from hugginface
 system.get_model()
 
-# load the tokenizer from huggingface 
+# load the tokenizer from huggingface
 system.load_tokenizer()
 
-# tokenize the dataset 
+# tokenize the dataset
 system.tokenize_dataset()
 
 # inspect the model
@@ -140,18 +140,18 @@ train(
         epochs=6,
 
         # False to disable
-        tensorboard_callback=True, 
+        tensorboard_callback=True,
 
         # True to push to hub (make sure you are logged in)
         # False to store results locally
-        push_to_hub_callback=False, 
+        push_to_hub_callback=False,
         early_stopping=True, # False to disable
         early_stopping_patience=2,
         experiment_name=experiment_name,
     )
 ```
 
-The `main.py` file contains an example that runs one experiment: 
+The `main.py` file contains an example that runs one experiment:
 
 ```shell
 # with poetry:
