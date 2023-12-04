@@ -1,6 +1,6 @@
 import logging
 from typing import Any
-
+import os
 from src.preprocess import PrepSystem
 
 logging.basicConfig(
@@ -48,7 +48,11 @@ def train(
 
     from src.metrics import Eval
 
-    output_path = f"distilbert-base-uncased-finetuned-ner-{experiment_name}"
+    output_path = f"{system.pretrained_model_checkpoint}-finetuned-ner-{experiment_name}"
+    
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     system.model.compile(optimizer=optimizer)
 
     logging.info(system.model.summary())
@@ -119,3 +123,6 @@ def train(
         callbacks=callbacks,
         verbose=verbose,
     )
+
+    if not push_to_hub_callback:
+        system.model.save_pretrained(f"./{output_path}/model")

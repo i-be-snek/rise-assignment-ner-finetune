@@ -1,6 +1,7 @@
 import json
 import logging
 from dataclasses import dataclass
+import os
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -58,6 +59,11 @@ class Eval:
                     if res != "number":
                         logging.info(f"{res} \t {results[i][res]}")
 
+        # create file if it doesn't exist
+        if not os.path.exists(self.metrics_results_filename):
+            open(self.metrics_results_filename, 'w').close()
+
+        # append metrics per tag to the metrics file
         with open(self.metrics_results_filename, "a") as f:
             f.write(json.dumps(results, default=str) + "\n")
 

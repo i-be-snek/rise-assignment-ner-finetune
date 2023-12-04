@@ -3,10 +3,13 @@ from dataclasses import dataclass, field
 from typing import Dict, Union
 
 from datasets import ClassLabel, DatasetDict, Sequence, load_dataset
-from transformers import (AutoTokenizer, BertTokenizerFast,
-                          DataCollatorForTokenClassification,
-                          PreTrainedTokenizerFast,
-                          TFAutoModelForTokenClassification)
+from transformers import (
+    AutoTokenizer,
+    BertTokenizerFast,
+    DataCollatorForTokenClassification,
+    PreTrainedTokenizerFast,
+    TFAutoModelForTokenClassification,
+)
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -38,7 +41,7 @@ class PrepSystem:
 
     # labels: Dict[str, int] = field(default_factory=lambda: {TagInfo.full_tagset})
     labels: Dict[str, int] = field(default=dict)
-    pretrained_model_checkpoint: str = "distilroberta-base"
+    pretrained_model_checkpoint: str = "distilbert-base-uncased"
     dataset_batch_size: int = 8
     filter_tagset: bool = False
     language: str = "en"
@@ -53,7 +56,9 @@ class PrepSystem:
 
         # Load dataset, must have columns: tokens (list[str]), ner_tags (list[int]), and lang (str)
         # https://huggingface.co/datasets/Babelscape/multinerd
-        self.dataset: DatasetDict = load_dataset(self.huggingface_dataset_name, split=self.split_filter)
+        self.dataset: DatasetDict = load_dataset(
+            self.huggingface_dataset_name, split=self.split_filter
+        )
         if not isinstance(self.dataset, DatasetDict):
             self.dataset = DatasetDict({self.split_filter.split("[")[0]: self.dataset})
 
@@ -66,13 +71,17 @@ class PrepSystem:
             )
         if self.language:
             for ds in self.data_split:
-                self.dataset[ds] = self.dataset[ds].filter(lambda x: x["lang"] == self.language)
+                self.dataset[ds] = self.dataset[ds].filter(
+                    lambda x: x["lang"] == self.language
+                )
                 self.dataset[ds] = self.dataset[ds].remove_columns("lang")
             logging.info(f"Filtered language by {self.language}. \n{self.dataset}")
 
         # Filter out extra tags if training with a smaller tagset
         if self.filter_tagset:
-            logging.info(f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'")
+            logging.info(
+                f"Keeping these tags only: {str(self.label_names)}. All other tags will be set to '0'"
+            )
             for ds in self.data_split:
                 self.dataset[ds] = self.dataset[ds].map(
                     self.filter_out_tags,
@@ -83,7 +92,9 @@ class PrepSystem:
         else:
             logging.info("Using the full tagset")
 
-        logging.info("Making sure all labels have sequential IDs. This can happen if a reduced tagset is chosen")
+        logging.info(
+            "Making sure all labels have sequential IDs. This can happen if a reduced tagset is chosen"
+        )
 
         # Create id2label
         self.label2id = self.labels
@@ -97,7 +108,9 @@ class PrepSystem:
         # if there are any labels to swap
         if labels_to_swap:
             logging.info(f"Swapping these labels: {labels_to_swap}")
-            self.label2id, self.id2label = self.swap_labels_in_config(self.id2label, labels_to_swap=labels_to_swap)
+            self.label2id, self.id2label = self.swap_labels_in_config(
+                self.id2label, labels_to_swap=labels_to_swap
+            )
 
             logging.info(f"Modified label to ID: {self.label2id}")
             logging.info(f"Modified ID to label: {self.id2label}")
@@ -136,7 +149,7 @@ class PrepSystem:
     def load_tokenizer(self):
         # Load Tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.pretrained_model_checkpoint,  # add_prefix_space=True
+            self.pretrained_model_checkpoint,
         )
 
         try:
@@ -227,7 +240,9 @@ class PrepSystem:
     @staticmethod
     def filter_out_tags(example: dict, tags_to_keep: list) -> dict:
         ner_tags: list = example["ner_tags"]
-        example["ner_tags"] = [0 if tag not in tags_to_keep else tag for tag in ner_tags]
+        example["ner_tags"] = [
+            0 if tag not in tags_to_keep else tag for tag in ner_tags
+        ]
         return example
 
     @staticmethod
