@@ -147,6 +147,7 @@ class PrepSystem:
             raise err
 
         # https://huggingface.co/docs/transformers/main_classes/data_collator
+        # applies random masking
         self.data_collator = DataCollatorForTokenClassification(
             self.tokenizer,
             return_tensors="np",

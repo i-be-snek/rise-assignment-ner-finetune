@@ -5,6 +5,20 @@ This script fine-tunes a pre-trained fill-mask model (such as `distilbert-base-u
 
 ### Summary
 
+I chose to finetune an uncased pretrained fill-mask model `distilbert-base-uncased`. A distilled model is smaller and faster to finetune with a slight drop in performance.
+
+The two finetuned models (A and B) were evaluated on the English subset of the [Babelscape/multinerd](https://huggingface.co/datasets/Babelscape/multinerd) test set. In model A, `CEL`, `FOOD`, `INST`, `MYTH`, and `PLANT` performed worse on F1. This is similar to the results in the paper (Table 5, evaluated on a manually-annotated 1K test set); except for `CEL` and `MYTH` where the finetuned model A performs worse. This is possibly due to the lack of casing, resulting in poorer precision. Overall, model B, fine-tuned on a smaller tagset, outperforms model A on all five tags (a likely outcome).
+
+Categories `BIO` or `PLANT` with examples of [binomial nomenclature](https://en.wikipedia.org/wiki/Binomial_nomenclature) might yield better performance if finetuned on a cased BERT model instead. Finetuning the fill-mask model on domain-specific texts (featuring `DIS` or `BIO`) before training a task-specific head for token classification could improve performance since the BERT tokenizer won't treat these now-seen words as rare tokens.
+Another limitation is the class imbalance (`BIO`, `DIS`, `INST`, `MYTH`, and `VEHI` have far fewer examples), which could be overcome by oversampling minority classes. Lastly, more hyperparameter optimization is needed. 
+
+### HuggingFace
+The two experiments and their evaluation metrics can be found on the huggingface hub:
+
+- [Experiment A](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_A)
+- [Experiment B](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_B)
+
+----
 
 ### Perquisites
 
@@ -171,9 +185,3 @@ for ds in system.data_split:
 
 ### Evaluation
 Follow the [`evaluation.ipynb`](evaluation.ipynb) notebook for evaluating the model using Huggingface's `evaluate` library
-
-### HuggingFace
-Two experiments can be found on the huggingface hub:
-
-- [Experiment A](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_A)
-- [Experiment B](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_B)
