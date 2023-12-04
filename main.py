@@ -21,35 +21,38 @@ if __name__ == "__main__":
 
     send_example_telemetry("finetuning fill-mask model on NER", framework="tensorflow")
 
-    # Initialize the GPU
-    check_gpus()
-
     pretrained_model_checkpoint = "distilbert-base-uncased"
-    experiment = "B"  # "B"
+    experiment = "A"
+    # experiment = "B"
+
     learning_rate = 2e-5
     optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
 
     if experiment == "A":
         labels = TagInfo.full_tagset
         filter_tagset = False
-        # learning_rate = 2e-5
-        # optimizer = AdamWeightDecay(learning_rate=learning_rate, weight_decay_rate=0.0)
+        dataset_batch_size = 8
 
     if experiment == "B":
         labels = TagInfo.main_five
         filter_tagset = True
-        # learning_rate = 3e-5
-        # optimizer = Adam(learning_rate)
+        dataset_batch_size = 16
 
     experiment_name = f"exp_{experiment}"
     logging.info(f"Initializeding {experiment_name}")
 
+    check_gpus()
+
     system = PrepSystem(
         labels=labels,
         pretrained_model_checkpoint=pretrained_model_checkpoint,
-        dataset_batch_size=16,
+        dataset_batch_size=dataset_batch_size,
         filter_tagset=filter_tagset,
         language="en",
+        split_filter=None,
+        # None to get all data splits available (train, test, validation)
+        # Otherwise, consult: https://huggingface.co/docs/datasets/v2.15.0/loading#slice-splits
+        # The split filter arg in this function only supports splits like 'train' or 'validation[:100]'. but not using the plus ´+', example: 'test+train[:100]' )
     )
 
     system.get_model()
@@ -62,15 +65,13 @@ if __name__ == "__main__":
     logging.info(f"Dataset loaded and tokenized.\nSample: {sample}")
     logging.info(f"Decoded: {system.tokenizer.convert_ids_to_tokens(sample['input_ids'])}")
 
-    logging.info(system.labels)
-
     train(
         optimizer=optimizer,
         system=system,
         verbose=1,
         epochs=6,
-        tensorboard_callback=False,
-        push_to_hub_callback=False,
+        tensorboard_callback=True,
+        push_to_hub_callback=True,
         early_stopping=True,
         early_stopping_patience=2,
         experiment_name=experiment_name,
