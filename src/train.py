@@ -1,6 +1,7 @@
 import logging
-from typing import Any
 import os
+from typing import Any
+
 from src.preprocess import PrepSystem
 
 logging.basicConfig(
@@ -49,7 +50,7 @@ def train(
     from src.metrics import Eval
 
     output_path = f"{system.pretrained_model_checkpoint}-finetuned-ner-{experiment_name}"
-    
+
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 

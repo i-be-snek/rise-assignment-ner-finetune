@@ -1,7 +1,7 @@
 import json
 import logging
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
@@ -61,7 +61,7 @@ class Eval:
 
         # create file if it doesn't exist
         if not os.path.exists(self.metrics_results_filename):
-            open(self.metrics_results_filename, 'w').close()
+            open(self.metrics_results_filename, "w").close()
 
         # append metrics per tag to the metrics file
         with open(self.metrics_results_filename, "a") as f:
