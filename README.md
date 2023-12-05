@@ -2,15 +2,6 @@
 
 This script fine-tunes a pre-trained fill-mask model (such as `distilbert-base-uncased`) on the NER token-classification task. It's specifically designed for [the multiNERD dataset](https://huggingface.co/datasets/Babelscape/multinerd) but any dataset with columns `tokens` (a list of string features), `ner_tags` (a list of classification labels (int)), and `lang` (a string feature) should work.
 
-
-### Summary
-
-I chose to finetune an uncased fill-mask model `distilbert-base-uncased`; distilled models are smaller and faster to finetune with a slight drop in performance.
-
-The two finetuned models (A and B) were evaluated on the English subset of the [multiNERD](https://huggingface.co/datasets/Babelscape/multinerd) test set. In model A, `CEL`, `FOOD`, `INST`, `MYTH`, and `PLANT` performed worse on F1. This is similar to the results in the paper (Table 5, evaluated on a manually-annotated 1K test set); except for `CEL` and `MYTH` where the finetuned model A performs worse. This is possibly due to the lack of casing, resulting in poorer precision. Overall, model B, fine-tuned on a smaller tagset, outperforms model A on all five tags (a likely outcome).
-
-Categories with examples of [binomial nomenclature](https://en.wikipedia.org/wiki/Binomial_nomenclature) (like `PLANT`) might yield better performance if finetuned on a cased BERT instead. Finetuning the fill-mask model on domain-specific texts (featuring sentences with `DIS` or `BIO`) before training a task-specific head for token classification could improve performance since the BERT tokenizer won't treat these now-seen words as rare tokens. Another limitation is the class imbalance (`BIO`, `DIS`, `INST`, `MYTH`, and `VEHI` have far fewer examples), which could be overcome by oversampling minority classes. Lastly, more hyperparameter optimization is needed.
-
 ### HuggingFace
 [![Follow me on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/follow-me-on-HF-md-dark.svg)](https://huggingface.co/i-be-snek)
 
@@ -19,6 +10,17 @@ You can test the two models and view their performance metrics on HuggingFace hu
 - [Experiment A](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_A)
 - [Experiment B](https://huggingface.co/i-be-snek/distilbert-base-uncased-finetuned-ner-exp_B)
 
+
+### Summary
+
+The experiments finetune an uncased fill-mask model `distillery-base-uncased`. Distilled models are smaller and faster to finetune with a slight drop in performance. The two finetuned models (A and B) were evaluated on the English subset of the [multiNERD](https://huggingface.co/datasets/Babelscape/multinerd) test set. In model A, `CEL`, `FOOD`, `INST`, `MYTH`, and `PLANT` performed worse on F1. Overall, model B, finetuned on a smaller tagset, outperforms model A on all five tags (a likely outcome). The results for model A are similar to those reported in the paper (which was finetuned on the [cased mBERT](https://huggingface.co/bert-base-multilingual-cased)), except for `CEL` and `MYTH` where model A performs worse.
+
+Limitations:
+- Categories with examples of [binomial nomenclature](https://en.wikipedia.org/wiki/Binomial_nomenclature) (like `PLANT`) might yield better performance if finetuned on a cased BERT instead.
+
+- `BIO`, `INST`, `MYTH`, and `VEHI` have far fewer examples, which could be overcome by oversampling minority classes (maybe with something like [SMOTE](https://github.com/analyticalmindsltd/smote_variants#smote)).
+
+- Finetuning the fill-mask model on domain-specific texts (with sentences featuring smaller classes like `MYTH`) before training a task-specific head for token classification could improve performance since the tokenizer won't treat these now-seen words as rare tokens.
 
 ----
 ### Perquisites

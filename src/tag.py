@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class TagInfo:
+    # https://huggingface.co/datasets/Babelscape/multinerd
     full_tagset = {
         "O": 0,
         "B-PER": 1,
