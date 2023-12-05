@@ -22,6 +22,15 @@ You can test the two models and view their performance metrics on HuggingFace hu
 
 ----
 
+<a href="https://gitmoji.dev">
+  <img
+    src="https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=flat-square"
+    alt="Gitmoji"
+  />
+</a>
+
+![Lint Passing](https://github.com/github/docs/actions/workflows/lint.yaml/badge.svg?event=push)
+
 ### Perquisites
 
 #### Install dependencies
