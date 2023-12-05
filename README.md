@@ -23,8 +23,6 @@ Limitations:
 - Finetuning the fill-mask model on domain-specific texts (with sentences featuring smaller classes like `MYTH`) before training a task-specific head for token classification could improve performance since the tokenizer won't treat these now-seen words as rare tokens.
 
 ----
-### Perquisites
-
 [![Lint](https://github.com/i-be-snek/rise-assignment-ner-finetune/actions/workflows/lint.yaml/badge.svg)](https://github.com/i-be-snek/rise-assignment-ner-finetune/actions/workflows/lint.yaml)
 <a href="https://gitmoji.dev">
   <img
@@ -32,6 +30,8 @@ Limitations:
     alt="Gitmoji"
   />
 </a>
+
+### Perquisites
 
 #### Install dependencies
 - **With `poetry` (recommended):**
