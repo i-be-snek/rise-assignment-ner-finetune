@@ -34,9 +34,7 @@ Limitations:
 ### Perquisites
 
 #### Install dependencies
-- **With `poetry` (recommended):**
-    1. install [Poetry](https://python-poetry.org/docs/#installation)
-    2. enter the poetry shell, which will create a venv and install all main and dev dependencies
+- **With [`poetry`](https://python-poetry.org/docs/#installation) (recommended):**
 
     ```shell
     poetry shell # activates a venv
