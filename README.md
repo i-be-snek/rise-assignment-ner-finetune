@@ -29,7 +29,7 @@ You can test the two models and view their performance metrics on HuggingFace hu
   />
 </a>
 
-![Lint Passing](https://github.com/github/docs/actions/workflows/lint.yaml/badge.svg?event=push)
+![Lint workflow](https://github.com/github/docs/actions/workflows/lint.yaml/badge.svg)
 
 ### Perquisites
 
