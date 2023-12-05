@@ -3,10 +3,13 @@ from dataclasses import dataclass, field
 from typing import Dict, Union
 
 from datasets import ClassLabel, DatasetDict, Sequence, load_dataset
-from transformers import (AutoTokenizer, BertTokenizerFast,
-                          DataCollatorForTokenClassification,
-                          PreTrainedTokenizerFast,
-                          TFAutoModelForTokenClassification)
+from transformers import (
+    AutoTokenizer,
+    BertTokenizerFast,
+    DataCollatorForTokenClassification,
+    PreTrainedTokenizerFast,
+    TFAutoModelForTokenClassification,
+)
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)-8s %(message)s",
