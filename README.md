@@ -31,7 +31,7 @@ Limitations:
   />
 </a>
 
-### Perquisites
+### Prerequisites
 
 #### Install dependencies
 - **With [`poetry`](https://python-poetry.org/docs/#installation) (recommended):**
